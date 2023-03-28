@@ -1,0 +1,8 @@
+# 03/28/2023: filter out renv
+renv/
+
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
