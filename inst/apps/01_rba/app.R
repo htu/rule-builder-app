@@ -1,27 +1,19 @@
-#' R Shiny app to display data sets in PODR
-#' @description Display data sets in PODR
+#' R Shiny app for building CDISC Core Rules 
+#' @description Read in rule definitons and generate core rules
 ##' @param fn a file name or URL pointing to script metadata file
 #' @return R shiny code for providing inputs and downloading TS file
 #' @export
 #' @examples
 #'\dontrun{
-#'   install.package("podr")
-#'   library("podr")
+#'   install.package("rule-builder-app")
+#'   library("rule-builder-app")
 #'   start_app()
 #'}
 #' @author Hanming Tu
 ##' @name app
 # ---------------------------------------------------------------------------
 # HISTORY   MM/DD/YYYY (developer) - explanation
-#  09/22/2020 (htu) - initial creation
-# usr <- 'phuse_su67e99huj'
-# pwd <- 'bGopEaaIQ7uB'
-# cp <- conn_podr(usr, pwd);
-# qry <- "SELECT * FROM information_schema.tables WHERE table_schema = 'public'"
-# cc <- get_table_names(con = cp, query_string = qry, lib_sel = 'readme' )
-# tb <- get_table_names(con=cp)
-# rd <- read_podr('ae', libname = 'virtual_css_2020_sdtm', con =  cp)
-# conn_podr(usr, pwd) %>% read_podr('ae', libname = 'virtual_css_2020_sdtm', con = .)
+#  03/28/2023 (htu) - initial creation based on podr/app 
 #
 # tbs <- conn_podr(usr, pwd) %>% read_podr('ae', libname = 'cdisc_pilot_sdtm', con = ., query_string = qry)
 # bGopEaaIQ7uB
@@ -37,12 +29,13 @@ library(rhandsontable)
 library(DT)
 # library(V8)
 library(stringr)
-library(podr)
+# library(podr)
 library(tibble)
 library(RPostgres)
 library(assertthat)
+library(comFuncs)
 
-is_empty <- podr::is_empty;
+is_empty <- comFuncs::is_empty;
 
 header <- dashboardHeader(
   title = "Display PODR Datasets"
@@ -53,9 +46,9 @@ sidebar <- dashboardSidebar(
     # Setting id makes input$tabs give the tabName of currently-selected tab
     id = "tab1",
     menuItem("PODR", icon = icon("cog"),
-        menuSubItem("PODR in GitHub", href = 'https://github.com/phuse-org/PODR', newtab = TRUE)
-      , menuSubItem("About this Package", href = 'https://github.com/TuCai/podr', newtab = TRUE)
-      , menuSubItem('Source Code',href='https://github.com/TuCai/podr/blob/master/inst/apps/01_podr/app.R', newtab = TRUE)
+        menuSubItem("About CORE Project", href = 'https://www.cdisc.org/core', newtab = TRUE)
+      , menuSubItem("Core Roadmap", href = 'https://www.cdisc.org/sites/default/files/2022-12/CDISC-Conformance-Rules-CORE-Engine-Progress-Roadmap-Peter-Van-Reusel.pdf', newtab = TRUE)
+      , menuSubItem('Source Code',href='https://github.com/htu/rule-builder-app/blob/main/inst/apps/01_rba/app.R', newtab = TRUE)
     )
     , style = "background-color: blue; "
   )
@@ -89,7 +82,7 @@ ui <- dashboardPage(
                  "label{ display: table-cell; text-align: right; vertical-align: middle; } .form-group { display: table-row;}")
     )
     , fluidRow(tabsetPanel(id='tabs'
-                           , tabPanel("Login", uiOutput("tabLogin"))
+#                           , tabPanel("Login", uiOutput("tabLogin"))
                            , tabPanel("ReadMe", uiOutput("tabReadme"))
                            , tabPanel("Table", uiOutput("tabTable"))
                            , tabPanel("Show", uiOutput("tabShow"))
@@ -99,13 +92,13 @@ ui <- dashboardPage(
     # , tabItems(
     , fluidRow(
       tabItem("tab1", hr()
-              , menuItem("PODR in GitHub", icon=icon('code'), href = 'https://github.com/phuse-org/PODR', newtab = TRUE)
-              , menuItem("About this Package", icon=icon('code'), href = 'https://github.com/TuCai/podr', newtab = TRUE)
-              , menuItem('Source Code',icon=icon('code'), href='https://github.com/TuCai/podr/blob/master/inst/apps/01_podr/app.R', newtab = TRUE)
+              , menuSubItem("About CORE Project", href = 'https://www.cdisc.org/core', newtab = TRUE)
+              , menuSubItem("Core Roadmap", href = 'https://www.cdisc.org/sites/default/files/2022-12/CDISC-Conformance-Rules-CORE-Engine-Progress-Roadmap-Peter-Van-Reusel.pdf', newtab = TRUE)
+              , menuSubItem('Source Code',href='https://github.com/htu/rule-builder-app/blob/main/inst/apps/01_rba/app.R', newtab = TRUE)
               , hr()
       )
     )
-    , tags$footer("PHUSE DVOST Project"
+    , tags$footer("CDISC Core Project"
                   , align = "center"
                   , style = "position:dynamic;
               bottom:0;
@@ -122,48 +115,48 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
 
   # -------------------- 1 tabPanel: Login  --------------------------------
-  get_conn <- reactive ({
-      validate(
-        need(input$username != "", "Please provide Database User Name.")
-      )
-      validate(
-        need(input$userpwd != "", "Please provide Database User Password.")
-      )
-      req(input$username)
-      req(input$userpwd)
-      conn_podr(username = input$username, userpwd = input$userpwd)
-  })
+  # get_conn <- reactive ({
+  #     validate(
+  #       need(input$username != "", "Please provide Database User Name.")
+  #     )
+  #     validate(
+  #       need(input$userpwd != "", "Please provide Database User Password.")
+  #     )
+  #     req(input$username)
+  #     req(input$userpwd)
+  #     conn_podr(username = input$username, userpwd = input$userpwd)
+  # })
 
-  # v <- reactiveValues(tbs = NULL)
+  # # v <- reactiveValues(tbs = NULL)
 
-  qry <- "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'";
+  # qry <- "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'";
 
-  get_tb_names <- reactive ({
-    cc <- get_table_names(con = get_conn(), query_string = qry )
-    options('podr_tables'=cc)
-    cc
-  })
+  # get_tb_names <- reactive ({
+  #   cc <- get_table_names(con = get_conn(), query_string = qry )
+  #   options('podr_tables'=cc)
+  #   cc
+  # })
 
-  output$DT1 <- DT::renderDataTable({
-    dd <- get_tb_names();
-    if (length(dd) < 1 || is.null(dd) || is.na(dd)) { dd <- data.frame() }
-    DT::datatable(dd);
-  })
+  # output$DT1 <- DT::renderDataTable({
+  #   dd <- get_tb_names();
+  #   if (length(dd) < 1 || is.null(dd) || is.na(dd)) { dd <- data.frame() }
+  #   DT::datatable(dd);
+  # })
 
-  output$tabLogin <- renderUI({
-    tabPanel("Login"
-             , div(id = "form"
-                   , style="display:inline-block"
-                   , textInput("username", "Database User Name *", value = "phuse_su67e99huj" )
-                   , bsAlert("alert")
-                   , passwordInput("userpwd", "Database User Password *", value = "bGopEaaIQ7uB" )
-                   , submitButton("Show", icon("refresh"))
-             )
-             , hr()
-             , h1("Public Tables")
-             , DT::dataTableOutput("DT1")
-    )
-  })
+  # output$tabLogin <- renderUI({
+  #   tabPanel("Login"
+  #            , div(id = "form"
+  #                  , style="display:inline-block"
+  #                  , textInput("username", "Database User Name *", value = "phuse_su67e99huj" )
+  #                  , bsAlert("alert")
+  #                  , passwordInput("userpwd", "Database User Password *", value = "bGopEaaIQ7uB" )
+  #                  , submitButton("Show", icon("refresh"))
+  #            )
+  #            , hr()
+  #            , h1("Public Tables")
+  #            , DT::dataTableOutput("DT1")
+  #   )
+  # })
 
   # -------------------- 2 tabPanel: Readme  --------------------------------
   list_libs <- reactive({
