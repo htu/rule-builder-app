@@ -1,0 +1,39 @@
+---
+Keywords: CORE, Rule Builder, Shiny App
+Script:
+  name: app.R
+  title: Rule Builder Application
+  desc: |
+    User interface for building CORE rules.
+  version: 0.0.1
+Language:
+  name: R
+  version: 4.2.1
+Files:
+  SDTM: SDTM_and_SDTMIG_Conformance_Rules_v2.0.yaml
+  SEND: SEND_Conformance_Rules_v4.0.yaml
+  ADAM: ADaM_Conformance_Rules_v4.0.yaml
+  FDACR: FDA_VR_v1.6.yaml
+Inputs:
+  datasets: null
+  p1: rexp
+  p2: 100
+Outputs:
+  datasets: null
+  v1: null
+  v2: null
+Repo:
+  base_dir: https://github.com/phuse-org/phuse-scripts/raw/master
+  prog_dir: development/R
+  repo_dir: phuse-org/phuse-scripts
+  repo_url: https://api.github.com/repos
+  data_dir: data
+  lib_dir: libs
+  log_dir: logs
+  out_dir: outputs
+  script_dir: scripts
+  lib_files: null
+Authors:
+  - name: Hanming Tu
+    email: hanming.h.tu@accenture.com
+    company: PhUSE
